@@ -4,6 +4,9 @@ mod error;
 
 pub use error::*;
 
+#[cfg(feature = "glob")]
+pub mod glob;
+
 pub fn join<T: AsRef<Path>, S: AsRef<str>>(base: T, cmp: S) -> Result<PathBuf> {
     let mut path = cmp.as_ref();
     let mut base = base.as_ref();
@@ -18,7 +21,7 @@ pub fn join<T: AsRef<Path>, S: AsRef<str>>(base: T, cmp: S) -> Result<PathBuf> {
     while path.starts_with("..") {
         base = match base.parent() {
             Some(parent) => parent,
-            None => return Err(Error {}),
+            None => return Err(Error::new(ErrorKind::Unknown)),
         };
         path = path.trim_left_matches("..");
         if !path.is_empty() && path.chars().nth(0).unwrap() == '/' {
