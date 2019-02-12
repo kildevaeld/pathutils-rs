@@ -11,6 +11,8 @@ pub fn join<T: AsRef<Path>, S: AsRef<str>>(base: T, cmp: S) -> Result<PathBuf> {
         path = path.trim_left_matches("./");
     } else if path == "." {
         return Ok(base.to_path_buf());
+    } else if path.starts_with("/") {
+        path = path.trim_left_matches("/");
     }
 
     while path.starts_with("..") {
@@ -65,7 +67,7 @@ pub fn parent<T: AsRef<str>>(filename: T) -> Option<String> {
     }
 
     match filename.as_ref().rfind('/') {
-        Some(idx) => Some(filename.as_ref().chars().take(idx).collect()),
+        Some(idx) => Some(filename.as_ref().chars().take(idx + 1).collect()),
         None => Some("".to_owned()),
     }
 }
@@ -118,11 +120,11 @@ mod tests {
         assert_eq!(parent("test.exe"), Some(String::from("")));
         assert_eq!(
             parent("yggdrasil/test.exe"),
-            Some(String::from("yggdrasil"))
+            Some(String::from("yggdrasil/"))
         );
         assert_eq!(
             parent("yggdrasil/test/visse"),
-            Some(String::from("yggdrasil/test"))
+            Some(String::from("yggdrasil/test/"))
         );
         assert_eq!(parent("."), None);
         assert_eq!(parent(".."), None);
