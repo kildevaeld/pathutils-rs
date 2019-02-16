@@ -14,7 +14,7 @@ pub fn resolve<T: AsRef<str>, S: AsRef<str>>(base: T, cmp: S) -> Result<String> 
     }
 
     while path.starts_with("..") {
-        base = match parent(base) {
+        base = match parent_path(base) {
             Some(p) => p,
             None => return Err(Error::new(ErrorKind::Unknown)),
         };
@@ -80,43 +80,43 @@ pub fn join(root: &str, glob: &str) -> String {
     }
 }
 
-pub fn parent_path<S: AsRef<str>>(input: S) -> String {
-    let input = input.as_ref();
-    if input.is_empty() {
-        return ".".to_owned();
-    }
+// pub fn parent_path<S: AsRef<str>>(input: S) -> String {
+//     let input = input.as_ref();
+//     if input.is_empty() {
+//         return ".".to_owned();
+//     }
 
-    let sep = '/';
+//     let sep = '/';
 
-    let code = input.chars().nth(0).unwrap();
-    let has_root = code == sep;
+//     let code = input.chars().nth(0).unwrap();
+//     let has_root = code == sep;
 
-    let mut end: i32 = -1;
-    let mut matched = true;
-    let len = input.len();
-    for (i, c) in input.chars().rev().enumerate() {
-        if c == sep {
-            if !matched {
-                end = (len - i) as i32;
-                break;
-            }
-        } else {
-            matched = false;
-        }
-    }
+//     let mut end: i32 = -1;
+//     let mut matched = true;
+//     let len = input.len();
+//     for (i, c) in input.chars().rev().enumerate() {
+//         if c == sep {
+//             if !matched {
+//                 end = (len - i) as i32;
+//                 break;
+//             }
+//         } else {
+//             matched = false;
+//         }
+//     }
 
-    if end == -1 {
-        return if has_root {
-            "/".to_owned()
-        } else {
-            ".".to_owned()
-        };
-    } else if has_root && end == 1 {
-        return "//".to_string();
-    }
+//     if end == -1 {
+//         return if has_root {
+//             "/".to_owned()
+//         } else {
+//             ".".to_owned()
+//         };
+//     } else if has_root && end == 1 {
+//         return "//".to_string();
+//     }
 
-    input.chars().take((end - 1) as usize).collect()
-}
+//     input.chars().take((end - 1) as usize).collect()
+// }
 
 pub fn join_slice<T: AsRef<str>, S: AsRef<str>>(base: T, cmps: &[S]) -> Result<String> {
     let mut path = base.as_ref().to_string();
@@ -168,7 +168,7 @@ pub fn set_extname<T: AsRef<str>, S: AsRef<str>>(filename: T, ext: S) -> String 
     }
 }
 
-pub fn parent<T: AsRef<str>>(filename: T) -> Option<String> {
+pub fn parent_path<T: AsRef<str>>(filename: T) -> Option<String> {
     if filename.as_ref().is_empty()
         || filename.as_ref() == "/"
         || filename.as_ref() == "."
@@ -246,31 +246,31 @@ mod tests {
 
     #[test]
     fn parent_test() {
-        assert_eq!(parent("test.exe"), Some(String::from("")));
+        assert_eq!(parent_path("test.exe"), Some(String::from("")));
         assert_eq!(
-            parent("yggdrasil/test.exe"),
+            parent_path("yggdrasil/test.exe"),
             Some(String::from("yggdrasil/"))
         );
         assert_eq!(
-            parent("yggdrasil/test/visse"),
+            parent_path("yggdrasil/test/visse"),
             Some(String::from("yggdrasil/test/"))
         );
-        assert_eq!(parent("."), None);
-        assert_eq!(parent(".."), None);
+        assert_eq!(parent_path("."), None);
+        assert_eq!(parent_path(".."), None);
     }
 
-    #[test]
-    fn parent_path_test() {
-        assert_eq!(parent_path("test.exe"), String::from("."));
-        assert_eq!(parent_path("yggdrasil/test.exe"), String::from("yggdrasil"));
-        assert_eq!(
-            parent_path("yggdrasil/test/visse"),
-            String::from("yggdrasil/test")
-        );
+    // #[test]
+    // fn parent_path_test() {
+    //     assert_eq!(parent_path("test.exe"), String::from("."));
+    //     assert_eq!(parent_path("yggdrasil/test.exe"), String::from("yggdrasil"));
+    //     assert_eq!(
+    //         parent_path("yggdrasil/test/visse"),
+    //         String::from("yggdrasil/test")
+    //     );
 
-        // assert_eq!(parent_path("."), None);
-        // assert_eq!(parent_path(".."), None);
-    }
+    //     // assert_eq!(parent_path("."), None);
+    //     // assert_eq!(parent_path(".."), None);
+    // }
 
     #[test]
     fn filename_test() {

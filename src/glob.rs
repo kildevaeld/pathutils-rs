@@ -2,7 +2,7 @@ use super::error::{Error, Result, ErrorKind};
 use regex::Regex;
 use std::collections::HashMap;
 use std::fs;
-use super::utils::join;
+use super::utils::{join,is_absolute,parent_path};
 
 lazy_static::lazy_static! {
     static ref GLOB_STRICT_REGEX: Regex = {
@@ -128,7 +128,12 @@ pub fn glob_parent<S: AsRef<str>>(glob: S) -> String {
     output.push('a');
 
     loop {
-        output = parent_path(output);
+        
+        output = match parent_path(output) {
+            Some(m) => m,
+            None => "".to_string(), 
+        };
+
         let len = output.len();
         if is_glob(&output, true) || GLOB_GROUP.is_match(&output) {
             continue;
@@ -136,7 +141,7 @@ pub fn glob_parent<S: AsRef<str>>(glob: S) -> String {
             && output.chars().nth(len - 1).unwrap() == '.'
             && output.chars().nth(len - 2).unwrap() == '.'
         {
-            output = parent_path(output);
+            output = parent_path(output).unwrap_or("".to_string());
         } else {
             break;
         }
@@ -145,7 +150,7 @@ pub fn glob_parent<S: AsRef<str>>(glob: S) -> String {
     output
 }
 
-pub fn to_absolute_glob<S: AsRef<str>>(input: S, cwd: S) -> Result<String> {
+pub fn to_absolute_glob<S: AsRef<str>, R: AsRef<str>>(input: S, cwd: R) -> Result<String> {
     let cwd = if is_absolute(cwd.as_ref()) {
         cwd.as_ref().to_owned()
     } else {
