@@ -2,7 +2,7 @@ use super::error::{Error, Result, ErrorKind};
 use regex::Regex;
 use std::collections::HashMap;
 use std::fs;
-
+use super::utils::join;
 
 lazy_static::lazy_static! {
     static ref GLOB_STRICT_REGEX: Regex = {
@@ -35,10 +35,7 @@ lazy_static::lazy_static! {
 
 }
 
-pub fn is_absolute<S: AsRef<str>>(input: S) -> bool {
-    let re = input.as_ref();
-    re.len() > 0 && re.chars().nth(0).unwrap() == '/'
-}
+
 
 pub struct Negation<'a> {
     pub negated: bool,
@@ -62,64 +59,64 @@ pub fn is_negated_glob<'a>(input: &'a str) -> bool {
     false
 }
 
-pub fn join(root: &str, glob: &str) -> String {
-    let l = root.len();
-    if root.chars().nth(l - 1).unwrap() == '/' && glob.chars().nth(0).unwrap() == '/' {
-        let mut root: String = root.chars().take(l - 1).collect();
-        root.reserve_exact(glob.len());
-        root.insert_str(l - 1, glob);
-        return root;
-    } else if root.chars().nth(l - 1).unwrap() == '/' || glob.chars().nth(0).unwrap() == '/' {
-        let mut out = String::with_capacity(root.len() + glob.len());
-        out.insert_str(0, root);
-        out.insert_str(root.len(), glob);
-        return out;
-    } else {
-        let mut out = String::with_capacity(root.len() + glob.len() + 1);
-        out.insert_str(0, root);
-        out.insert(root.len(), '/');
-        out.insert_str(root.len() + 1, glob);
-        return out;
-    }
-}
+// pub fn join(root: &str, glob: &str) -> String {
+//     let l = root.len();
+//     if root.chars().nth(l - 1).unwrap() == '/' && glob.chars().nth(0).unwrap() == '/' {
+//         let mut root: String = root.chars().take(l - 1).collect();
+//         root.reserve_exact(glob.len());
+//         root.insert_str(l - 1, glob);
+//         return root;
+//     } else if root.chars().nth(l - 1).unwrap() == '/' || glob.chars().nth(0).unwrap() == '/' {
+//         let mut out = String::with_capacity(root.len() + glob.len());
+//         out.insert_str(0, root);
+//         out.insert_str(root.len(), glob);
+//         return out;
+//     } else {
+//         let mut out = String::with_capacity(root.len() + glob.len() + 1);
+//         out.insert_str(0, root);
+//         out.insert(root.len(), '/');
+//         out.insert_str(root.len() + 1, glob);
+//         return out;
+//     }
+// }
 
-pub fn parent_path<S: AsRef<str>>(input: S) -> String {
-    let input = input.as_ref();
-    if input.is_empty() {
-        return ".".to_owned();
-    }
+// pub fn parent_path<S: AsRef<str>>(input: S) -> String {
+//     let input = input.as_ref();
+//     if input.is_empty() {
+//         return ".".to_owned();
+//     }
 
-    let sep = '/';
+//     let sep = '/';
 
-    let code = input.chars().nth(0).unwrap();
-    let has_root = code == sep;
+//     let code = input.chars().nth(0).unwrap();
+//     let has_root = code == sep;
 
-    let mut end: i32 = -1;
-    let mut matched = true;
-    let len = input.len();
-    for (i, c) in input.chars().rev().enumerate() {
-        if c == sep {
-            if !matched {
-                end = (len - i) as i32;
-                break;
-            }
-        } else {
-            matched = false;
-        }
-    }
+//     let mut end: i32 = -1;
+//     let mut matched = true;
+//     let len = input.len();
+//     for (i, c) in input.chars().rev().enumerate() {
+//         if c == sep {
+//             if !matched {
+//                 end = (len - i) as i32;
+//                 break;
+//             }
+//         } else {
+//             matched = false;
+//         }
+//     }
 
-    if end == -1 {
-        return if has_root {
-            "/".to_owned()
-        } else {
-            ".".to_owned()
-        };
-    } else if has_root && end == 1 {
-        return "//".to_string();
-    }
+//     if end == -1 {
+//         return if has_root {
+//             "/".to_owned()
+//         } else {
+//             ".".to_owned()
+//         };
+//     } else if has_root && end == 1 {
+//         return "//".to_string();
+//     }
 
-    input.chars().take((end - 1) as usize).collect()
-}
+//     input.chars().take((end - 1) as usize).collect()
+// }
 
 pub fn glob_parent<S: AsRef<str>>(glob: S) -> String {
     let mut output = glob.as_ref().to_owned();
@@ -220,15 +217,7 @@ pub fn is_glob<S: AsRef<str>>(input: S, strict: bool) -> bool {
     }
 }
 
-pub fn to_absolute<S: AsRef<str>, C: AsRef<str>>(path: S, cwd: C) -> String {
-    let mut path = path.as_ref().to_string();
 
-    if !is_absolute(&path) {
-        path = join(cwd.as_ref(), &path);
-    }
-
-    path
-}
 
 #[cfg(test)]
 pub mod tests {
