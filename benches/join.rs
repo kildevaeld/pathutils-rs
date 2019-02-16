@@ -2,13 +2,12 @@
 extern crate criterion;
 
 use criterion::Criterion;
-use pathutils::join;
+use pathutils::resolve;
 use std::path::Path;
 
 fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("fib 20", |b| {
-        let path = Path::new("/test");
-        b.iter(|| join(&path, "../me.txt"));
+        b.iter(|| resolve("/test", "../me.txt"));
     });
 }
 
