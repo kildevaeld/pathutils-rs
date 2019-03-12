@@ -140,27 +140,50 @@ pub fn extname<T: AsRef<str>>(filename: T) -> Option<String> {
     if filename.as_ref() == "." || filename.as_ref() == ".." {
         return None;
     }
-    let iter: String = filename
-        .as_ref()
-        .chars()
-        .rev()
-        .take_while(|m| *m != '.')
-        .collect::<String>()
-        .chars()
-        .rev()
-        .collect();
-    if iter.as_str() == filename.as_ref() {
-        None
-    } else {
-        Some(iter)
+    let len = filename.as_ref().len();
+    let mut index = -1;
+    'outer: for i in (0..len).rev() {
+        match filename.as_ref().chars().nth(i) {
+            Some('/') => break 'outer,
+            Some('.') => {
+                if i == 0 {
+                    break 'outer;
+                } else if filename.as_ref().chars().nth(i - 1).unwrap() == '/' {
+                    break 'outer;
+                }
+                index = i as i32;
+                break 'outer;
+            }
+            _ => {}
+        }
     }
+
+    if index == -1 {
+        return None;
+    }
+
+    Some(filename.as_ref().chars().skip(index as usize).collect())
 }
 
 pub fn set_extname<T: AsRef<str>, S: AsRef<str>>(filename: T, ext: S) -> String {
     let e = extname(filename.as_ref());
+    let ext = match ext.as_ref().chars().nth(0) {
+        Some(m) => {
+            if m == '.' {
+                ext.as_ref().trim_start_matches(".")
+            } else {
+                ext.as_ref()
+            }
+        }
+        None => return filename.as_ref().to_string(),
+    };
+
     match e {
-        None => format!("{}.{}", filename.as_ref(), ext.as_ref()),
-        Some(m) => filename.as_ref().replace(&m, ext.as_ref()).to_string(),
+        None => format!("{}.{}", filename.as_ref(), ext),
+        Some(m) => filename
+            .as_ref()
+            .replace(&m, &format!(".{}", ext))
+            .to_string(),
     }
 }
 
@@ -223,22 +246,25 @@ mod tests {
 
     #[test]
     fn extname_test() {
-        assert_eq!(extname("test.exe"), Some(String::from("exe")));
-        assert_eq!(extname("yggdrasil/test.exe"), Some(String::from("exe")));
+        assert_eq!(extname("test.exe"), Some(String::from(".exe")));
+        assert_eq!(extname("yggdrasil/test.exe"), Some(String::from(".exe")));
         assert_eq!(extname("yggdrasil/test"), None);
+        assert_eq!(extname("yggdrasil/.test"), None);
+        assert_eq!(extname(".yggdrasil/test"), None);
+        assert_eq!(extname("./yggdrasil/test"), None);
         assert_eq!(extname("."), None);
         assert_eq!(extname(".."), None);
     }
 
     #[test]
-    fn set_extname_test() {
+    fn setextname_test() {
         assert_eq!(set_extname("test", "exe"), String::from("test.exe"));
         assert_eq!(
             set_extname("yggdrasil/test.exe", "txt"),
             String::from("yggdrasil/test.txt")
         );
         assert_eq!(
-            set_extname("yggdrasil/test", "md"),
+            set_extname("yggdrasil/test", ".md"),
             String::from("yggdrasil/test.md")
         );
         // assert_eq!(extname("."), None);
