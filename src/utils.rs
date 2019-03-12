@@ -1,6 +1,4 @@
 use super::error::{Error, ErrorKind, Result};
-use std::path::{Path, PathBuf};
-use std::str::Chars;
 
 pub fn resolve<T: AsRef<str>, S: AsRef<str>>(base: T, cmp: S) -> Result<String> {
     let mut path = cmp.as_ref();
