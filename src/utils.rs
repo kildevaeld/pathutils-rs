@@ -18,9 +18,7 @@ pub fn resolve<T: AsRef<str>, S: AsRef<str>>(base: T, cmp: S) -> Result<String> 
             Some(p) => p,
             None => return Err(Error::new(ErrorKind::Unknown)),
         };
-        //base = parent_path(path);
         path = path.trim_start_matches("..");
-
         if !path.is_empty() && path.chars().nth(0).unwrap() == '/' {
             path = path.trim_start_matches("/");
         }
@@ -177,8 +175,13 @@ pub fn parent_path<T: AsRef<str>>(filename: T) -> Option<String> {
         return None;
     }
 
-    match filename.as_ref().rfind('/') {
-        Some(idx) => Some(filename.as_ref().chars().take(idx + 1).collect()),
+    let mut r = filename.as_ref();
+    if r.chars().last().unwrap() == '/' {
+        r = r.trim_end_matches("/");
+    }
+
+    match r.rfind('/') {
+        Some(idx) => Some(r.chars().take(idx + 1).collect()),
         None => Some("".to_owned()),
     }
 }
@@ -257,6 +260,14 @@ mod tests {
         );
         assert_eq!(parent_path("."), None);
         assert_eq!(parent_path(".."), None);
+    }
+
+    #[test]
+    fn test_resolve() {
+        assert_eq!(resolve("/test", "../").unwrap().as_str(), "/");
+        assert_eq!(resolve("/test/rapper", "../").unwrap().as_str(), "/test/");
+        assert_eq!(resolve("/test/rapper", "../../").unwrap().as_str(), "/");
+        assert!(resolve("/test", "../../").is_err())
     }
 
     // #[test]
