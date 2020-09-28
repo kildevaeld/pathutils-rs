@@ -12,8 +12,8 @@ pub fn resolve<T: AsRef<str>, S: AsRef<str>>(base: T, cmp: S) -> Result<String> 
     }
 
     while path.starts_with("..") {
-        base = match parent_path(base) {
-            Some(p) => p,
+        base = match parent_path(&base) {
+            Some(p) => p.to_owned(),
             None => return Err(Error::new(ErrorKind::Unknown)),
         };
         path = path.trim_start_matches("..");
@@ -136,19 +136,19 @@ pub fn to_absolute<S: AsRef<str>, C: AsRef<str>>(path: S, cwd: C) -> Result<Stri
     Ok(path)
 }
 
-pub fn extname<T: AsRef<str>>(filename: T) -> Option<String> {
-    if filename.as_ref() == "." || filename.as_ref() == ".." {
+pub fn extname(filename: &str) -> Option<&str> {
+    if filename == "." || filename == ".." {
         return None;
     }
-    let len = filename.as_ref().len();
+    let len = filename.len();
     let mut index = -1;
     'outer: for i in (0..len).rev() {
-        match filename.as_ref().chars().nth(i) {
+        match filename.chars().nth(i) {
             Some('/') => break 'outer,
             Some('.') => {
                 if i == 0 {
                     break 'outer;
-                } else if filename.as_ref().chars().nth(i - 1).unwrap() == '/' {
+                } else if filename.chars().nth(i - 1).unwrap() == '/' {
                     break 'outer;
                 }
                 index = i as i32;
@@ -162,7 +162,8 @@ pub fn extname<T: AsRef<str>>(filename: T) -> Option<String> {
         return None;
     }
 
-    Some(filename.as_ref().chars().skip(index as usize).collect())
+    Some(&filename[filename.char_indices().nth(index as usize).unwrap().0..filename.len()])
+    // Some(&filename.chars().skip(index as usize).collect())
 }
 
 pub fn set_extname<T: AsRef<str>, S: AsRef<str>>(filename: T, ext: S) -> String {
@@ -187,38 +188,51 @@ pub fn set_extname<T: AsRef<str>, S: AsRef<str>>(filename: T, ext: S) -> String 
     }
 }
 
-pub fn parent_path<T: AsRef<str>>(filename: T) -> Option<String> {
-    if filename.as_ref().is_empty()
-        || filename.as_ref() == "/"
-        || filename.as_ref() == "."
-        || filename.as_ref() == ".."
-    {
+pub fn parent_path(filename: &str) -> Option<&str> {
+    if filename.is_empty() || filename == "/" || filename == "." || filename == ".." {
         return None;
     }
 
-    let mut r = filename.as_ref();
+    let mut r = filename;
     if r.chars().last().unwrap() == '/' {
         r = r.trim_end_matches("/");
     }
 
+    // match r.rfind('/') {
+    //     Some(idx) => Some(r.chars().take(idx + 1).collect()),
+    //     None => Some("".to_owned()),
+    // }
+
     match r.rfind('/') {
-        Some(idx) => Some(r.chars().take(idx + 1).collect()),
-        None => Some("".to_owned()),
+        Some(idx) => Some(&r[0..r.char_indices().nth(idx + 1).unwrap().0]),
+        None => None,
     }
 }
 
-pub fn filename<T: AsRef<str>>(path: T) -> Option<String> {
-    if path.as_ref().is_empty()
-        || path.as_ref() == "/"
-        || path.as_ref() == "."
-        || path.as_ref() == ".."
+pub fn filename(path: &str) -> Option<&str> {
+    if path.is_empty()
+        || path == "/"
+        || path == "."
+        || path == ".."
+        || path.chars().last() == Some('/')
     {
         return None;
     }
 
-    match path.as_ref().rfind('/') {
-        Some(idx) => Some(path.as_ref().chars().skip(idx + 1).collect()),
-        None => Some(path.as_ref().to_string()),
+    match path.rfind('/') {
+        Some(idx) => Some(&path[path.char_indices().nth(idx + 1).unwrap().0..path.len()]),
+        None => Some(path),
+    }
+}
+
+pub fn set_filename(path: &str, filename: &str) -> String {
+    if path.chars().last() == Some('/') {
+        join(path, filename)
+    } else {
+        match parent_path(path) {
+            Some(path) => join(path, filename),
+            None => filename.to_owned(),
+        }
     }
 }
 
@@ -246,8 +260,8 @@ mod tests {
 
     #[test]
     fn extname_test() {
-        assert_eq!(extname("test.exe"), Some(String::from(".exe")));
-        assert_eq!(extname("yggdrasil/test.exe"), Some(String::from(".exe")));
+        assert_eq!(extname("test.exe"), Some(".exe"));
+        assert_eq!(extname("yggdrasil/test.exe"), Some(".exe"));
         assert_eq!(extname("yggdrasil/test"), None);
         assert_eq!(extname("yggdrasil/.test"), None);
         assert_eq!(extname(".yggdrasil/test"), None);
@@ -273,15 +287,9 @@ mod tests {
 
     #[test]
     fn parent_test() {
-        assert_eq!(parent_path("test.exe"), Some(String::from("")));
-        assert_eq!(
-            parent_path("yggdrasil/test.exe"),
-            Some(String::from("yggdrasil/"))
-        );
-        assert_eq!(
-            parent_path("yggdrasil/test/visse"),
-            Some(String::from("yggdrasil/test/"))
-        );
+        assert_eq!(parent_path("test.exe"), None);
+        assert_eq!(parent_path("yggdrasil/test.exe"), Some("yggdrasil/"));
+        assert_eq!(parent_path("yggdrasil/test/visse"), Some("yggdrasil/test/"));
         assert_eq!(parent_path("."), None);
         assert_eq!(parent_path(".."), None);
     }
@@ -309,17 +317,21 @@ mod tests {
 
     #[test]
     fn filename_test() {
-        assert_eq!(filename("test.exe"), Some(String::from("test.exe")));
-        assert_eq!(
-            filename("yggdrasil/test.exe"),
-            Some(String::from("test.exe"))
-        );
-        assert_eq!(
-            filename("yggdrasil/test/visse"),
-            Some(String::from("visse"))
-        );
+        assert_eq!(filename("test.exe"), Some("test.exe"));
+        assert_eq!(filename("yggdrasil/test.exe"), Some("test.exe"));
+        assert_eq!(filename("yggdrasil/test/visse"), Some("visse"));
+        assert_eq!(filename("yggdrasil/test/visse/"), None);
         assert_eq!(filename("."), None);
         assert_eq!(filename(".."), None);
     }
 
+    #[test]
+    fn set_filename_test() {
+        assert_eq!(set_filename("test/", "test.exe"), "test/test.exe");
+        assert_eq!(set_filename("test", "test.exe"), "test.exe");
+        assert_eq!(set_filename("test/free", "test.exe"), "test/test.exe");
+        assert_eq!(set_filename("test/free/", "test.exe"), "test/free/test.exe");
+
+        assert_eq!(set_filename("", "test.exe"), "test.exe");
+    }
 }
