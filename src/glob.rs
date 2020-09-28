@@ -1,8 +1,8 @@
-use super::error::{Error, Result, ErrorKind};
+use super::error::{Error, ErrorKind, Result};
+use super::utils::{is_absolute, join, parent_path};
 use regex::Regex;
 use std::collections::HashMap;
 use std::fs;
-use super::utils::{join,is_absolute,parent_path};
 
 lazy_static::lazy_static! {
     static ref GLOB_STRICT_REGEX: Regex = {
@@ -34,8 +34,6 @@ lazy_static::lazy_static! {
     };
 
 }
-
-
 
 pub struct Negation<'a> {
     pub negated: bool,
@@ -128,10 +126,9 @@ pub fn glob_parent<S: AsRef<str>>(glob: S) -> String {
     output.push('a');
 
     loop {
-        
-        output = match parent_path(output) {
-            Some(m) => m,
-            None => "".to_string(), 
+        output = match parent_path(&output) {
+            Some(m) => m.to_owned(),
+            None => "".to_string(),
         };
 
         let len = output.len();
@@ -141,7 +138,9 @@ pub fn glob_parent<S: AsRef<str>>(glob: S) -> String {
             && output.chars().nth(len - 1).unwrap() == '.'
             && output.chars().nth(len - 2).unwrap() == '.'
         {
-            output = parent_path(output).unwrap_or("".to_string());
+            output = parent_path(&output)
+                .map(|m| m.to_string())
+                .unwrap_or("".to_string());
         } else {
             break;
         }
@@ -221,8 +220,6 @@ pub fn is_glob<S: AsRef<str>>(input: S, strict: bool) -> bool {
         }
     }
 }
-
-
 
 #[cfg(test)]
 pub mod tests {

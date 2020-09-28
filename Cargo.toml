@@ -12,7 +12,7 @@ lazy_static = { version = "^1.2", optional = true}
 criterion = "0.2"
 
 [features]
-default = []
+default = [  ]
 glob = ["regex", "lazy_static"]
 
 [[bench]]
